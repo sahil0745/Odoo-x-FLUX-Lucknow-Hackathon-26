@@ -147,3 +147,90 @@ export interface PaginationMeta {
   totalPages: number;
 }
 
+// -----------------------------------------------------------------------------
+// SUBSCRIPTION PLANS TYPES (M03)
+// -----------------------------------------------------------------------------
+
+export type BillingFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+export type PlanAvailabilityStatus = 'ACTIVE' | 'UPCOMING' | 'EXPIRED' | 'INACTIVE';
+
+export interface AssociatedProductSummary {
+  id: string;
+  name: string;
+  type: string;
+  salesPrice: string;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  billingFrequency: BillingFrequency;
+  intervalCount: number;
+  minimumQuantity: number;
+  availableFrom: string;
+  availableUntil: string | null;
+  allowAutoClose: boolean;
+  allowEarlyClose: boolean;
+  allowPause: boolean;
+  allowRenewal: boolean;
+  isActive: boolean;
+  currency: string;
+  cadenceFormatted: string;
+  availabilityStatus: PlanAvailabilityStatus;
+  isAvailable: boolean;
+  activeSubscriptionCount?: number;
+  associatedTemplatesCount?: number;
+  associatedProducts?: AssociatedProductSummary[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePlanPayload {
+  name: string;
+  description?: string | null;
+  price: string | number;
+  billingFrequency: BillingFrequency;
+  intervalCount?: number;
+  minimumQuantity?: number;
+  availableFrom: string;
+  availableUntil?: string | null;
+  allowAutoClose?: boolean;
+  allowEarlyClose?: boolean;
+  allowPause?: boolean;
+  allowRenewal?: boolean;
+  isActive?: boolean;
+  associatedProductIds?: string[];
+}
+
+export interface UpdatePlanPayload {
+  name?: string;
+  description?: string | null;
+  price?: string | number;
+  billingFrequency?: BillingFrequency;
+  intervalCount?: number;
+  minimumQuantity?: number;
+  availableFrom?: string;
+  availableUntil?: string | null;
+  allowAutoClose?: boolean;
+  allowEarlyClose?: boolean;
+  allowPause?: boolean;
+  allowRenewal?: boolean;
+  isActive?: boolean;
+}
+
+export interface QuantityValidationResult {
+  isValid: boolean;
+  error?: string;
+  requestedQuantity: number;
+  minimumQuantity: number;
+}
+
+export interface BillingCycleResult {
+  periodStart: string;
+  periodEnd: string;
+  nextBillingDate: string;
+}
+
+

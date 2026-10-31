@@ -13,6 +13,10 @@ import { ProductListPage } from '../pages/products/ProductListPage';
 import { AddProductPage } from '../pages/products/AddProductPage';
 import { ProductDetailsPage } from '../pages/products/ProductDetailsPage';
 import { EditProductPage } from '../pages/products/EditProductPage';
+import { PlanListPage } from '../pages/plans/PlanListPage';
+import { AddPlanPage } from '../pages/plans/AddPlanPage';
+import { PlanDetailsPage } from '../pages/plans/PlanDetailsPage';
+import { EditPlanPage } from '../pages/plans/EditPlanPage';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 
 export const AppRoutes: React.FC = () => {
@@ -57,6 +61,40 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <EditProductPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Subscription Plan Management Routes */}
+        <Route
+          path="/plans"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <PlanListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans/new"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AddPlanPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans/:id"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <PlanDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <EditPlanPage />
             </ProtectedRoute>
           }
         />

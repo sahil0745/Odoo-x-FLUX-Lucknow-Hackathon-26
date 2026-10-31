@@ -5,6 +5,7 @@ import {
   X,
   Users,
   Package,
+  Calendar,
   LogOut,
   LogIn,
   UserPlus,
@@ -77,13 +78,22 @@ export const Header: React.FC = () => {
             </Link>
 
             {isAuthenticated && (
-              <Link
-                to="/products"
-                className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
-              >
-                <Package className="w-4 h-4 text-indigo-400" />
-                <span>Products</span>
-              </Link>
+              <>
+                <Link
+                  to="/products"
+                  className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                >
+                  <Package className="w-4 h-4 text-indigo-400" />
+                  <span>Products</span>
+                </Link>
+                <Link
+                  to="/plans"
+                  className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                >
+                  <Calendar className="w-4 h-4 text-indigo-400" />
+                  <span>Plans</span>
+                </Link>
+              </>
             )}
 
             {/* Admin Specific Links */}
@@ -155,13 +165,22 @@ export const Header: React.FC = () => {
               Dashboard
             </Link>
             {isAuthenticated && (
-              <Link
-                to="/products"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800"
-              >
-                Products
-              </Link>
+              <>
+                <Link
+                  to="/products"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800"
+                >
+                  Products
+                </Link>
+                <Link
+                  to="/plans"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800"
+                >
+                  Subscription Plans
+                </Link>
+              </>
             )}
             {user?.role === 'ADMIN' && (
               <Link
