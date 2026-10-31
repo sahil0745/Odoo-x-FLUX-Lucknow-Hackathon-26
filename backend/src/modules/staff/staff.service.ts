@@ -3,6 +3,7 @@ import { prisma } from '../../config/database';
 import { CreateStaffDto, UpdateStaffDto } from './staff.types';
 import { hashPassword, validatePasswordPolicy } from '../../utils/password';
 import { revokeAllUserTokens } from '../../utils/token';
+import { getSessionStore } from '../auth/session.store';
 import {
   ConflictError,
   NotFoundError,
@@ -208,6 +209,7 @@ export class StaffService {
     // If deactivated, revoke all active sessions immediately
     if (!isActive) {
       revokeAllUserTokens(staffUserId);
+      await getSessionStore().revokeAllUserSessions(staffUserId);
       logger.info(`[Staff] Staff account ${staff.email} deactivated. Sessions revoked.`);
     } else {
       logger.info(`[Staff] Staff account ${staff.email} reactivated.`);

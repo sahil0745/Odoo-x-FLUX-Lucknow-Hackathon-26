@@ -1,6 +1,6 @@
 # Brightloop Subscription Management System — Role-Based Access Control (RBAC) Matrix
 
-> **Document Version:** 1.0  
+> **Document Version:** 1.1 (Security Hardened & Audited)  
 > **Source Principle:** Principle of Least Privilege (PoLP)  
 > **Enforcement Points:** Backend Middleware (`requireRole`, `requirePermission`, `requireCustomerOwnership`) + Frontend Route Guards
 
@@ -10,9 +10,9 @@
 
 | Role | Target Persona | Scope of Authority |
 |---|---|---|
-| **`ADMIN`** | System Owner / Executive | Unrestricted system-wide control, staff provisioning, security configurations, tax & discount management, audit log access. |
-| **`STAFF`** | Internal Operations Team | Day-to-day operational execution (creating quotations, viewing permitted subscriptions, recording approved payments). Zero staff provisioning or system-level configuration access. |
-| **`CUSTOMER`** | External Subscribing Client | Self-service access strictly scoped to their own profile, quotations, contracts, invoices, and payments. Zero access to other accounts or operational catalogs. |
+| **`ADMIN`** | System Owner / Executive | Unrestricted system-wide control, staff provisioning, security configurations, tax & discount administration, audit log access. |
+| **`STAFF`** | Internal Operations Team | Day-to-day operational execution (creating quotations, viewing permitted subscriptions, recording approved payments). Zero staff provisioning, zero tax administration, zero discount-rule administration, and zero system settings/audit access. |
+| **`CUSTOMER`** | External Subscribing Client | Self-service access strictly scoped to their own profile, quotations, contracts, invoices, and payments. Zero access to other customer accounts, staff rosters, or administrative catalogs. |
 
 ---
 
@@ -68,9 +68,13 @@
 
 ---
 
-## 4. Staff Security Boundaries
+## 4. Staff Security Boundaries & Future Module Readiness
 
-- Internal Staff accounts **cannot** provision or promote other staff accounts (`staff.create` is restricted to `ADMIN`).
-- Internal Staff accounts **cannot** deactivate or reactivate accounts.
-- Internal Staff accounts **cannot** modify tax rules (`taxes.manage`) or discount rules (`discounts.manage`).
-- Public registration endpoints (`/api/v1/auth/register`) strictly hardcode `role: UserRole.CUSTOMER`. Any attempt to pass `role: 'ADMIN'` or `role: 'STAFF'` in the request body is stripped during Zod validation.
+- **No Staff Creation:** Internal Staff accounts **cannot** provision or promote other staff accounts (`staff.create` is restricted strictly to `ADMIN`).
+- **No Tax Administration:** Internal Staff accounts **cannot** create, modify, or archive legal tax rules (`taxes.manage` is restricted strictly to `ADMIN`).
+- **No Discount Rule Administration:** Internal Staff accounts **cannot** create or manage global discount rules (`discounts.manage` is restricted strictly to `ADMIN`).
+- **No System Settings / Audit Access:** Restricted system configuration (`settings.manage`) and immutable audit logs (`audit.read`) are strictly `ADMIN` privileges.
+- **Future Module Extensibility:** Every future business module (Product Catalog, Quotation Engine, Subscription Billing, Payments) can protect its endpoints consistently using:
+  - `requirePermission('module.action')` for granular permission checks.
+  - `requireRole(UserRole.ADMIN, UserRole.STAFF)` for staff-only operational workflows.
+  - `requireCustomerOwnership('customerId')` for multi-tenant self-service isolation.

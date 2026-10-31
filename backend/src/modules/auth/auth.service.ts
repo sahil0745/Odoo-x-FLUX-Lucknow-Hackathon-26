@@ -9,6 +9,7 @@ import {
 import {
   comparePassword,
   hashPassword,
+  normalizePassword,
   validatePasswordPolicy,
 } from '../../utils/password';
 import {
@@ -16,8 +17,6 @@ import {
   generateRefreshToken,
   generateSecureRandomToken,
   hashToken,
-  revokeAllUserTokens,
-  revokeRefreshToken,
   verifyRefreshToken,
 } from '../../utils/token';
 import { sendPasswordResetEmail } from '../../utils/email';
@@ -29,18 +28,30 @@ import {
   ValidationError,
 } from '../../utils/AppError';
 import { getPermissionsForRole } from '../../config/permissions';
+import { getSessionStore } from './session.store';
 import { logger } from '../../utils/logger';
+
+export interface RequestClientMetadata {
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+const inFlightTokenRotations = new Set<string>();
 
 export class AuthService {
   /**
    * Register a new Customer account with an associated CustomerProfile.
-   * Enforces server-side CUSTOMER role assignment and handles race conditions.
+   * Enforces server-side CUSTOMER role assignment, Unicode normalization, and persistent session storage.
    */
-  async registerCustomer(dto: CustomerRegisterDto): Promise<AuthSessionResponse & { refreshToken: string }> {
-    const normalizedEmail = dto.email.toLowerCase().trim();
+  async registerCustomer(
+    dto: CustomerRegisterDto,
+    meta?: RequestClientMetadata
+  ): Promise<AuthSessionResponse & { refreshToken: string }> {
+    const normalizedEmail = dto.email.normalize('NFKC').toLowerCase().trim();
+    const normalizedPassword = normalizePassword(dto.password);
 
-    // 1. Validate strict password rules
-    const passwordCheck = validatePasswordPolicy(dto.password);
+    // 1. Validate strict password rules (including 72-byte limit)
+    const passwordCheck = validatePasswordPolicy(normalizedPassword);
     if (!passwordCheck.isValid) {
       throw new ValidationError('Password policy violation', passwordCheck.errors);
     }
@@ -55,11 +66,10 @@ export class AuthService {
       }
     } catch (err) {
       if (err instanceof AppError) throw err;
-      // In offline mode, continue to attempt create or mock
     }
 
     // 3. Hash password securely (bcrypt factor 12)
-    const passwordHash = await hashPassword(dto.password);
+    const passwordHash = await hashPassword(normalizedPassword);
 
     // 4. Create User and CustomerProfile atomically
     try {
@@ -96,7 +106,21 @@ export class AuthService {
         role: user.role,
       });
 
-      const { token: refreshToken } = generateRefreshToken({ userId: user.id });
+      const { token: refreshToken, jti, familyId, expiresAt } = generateRefreshToken({
+        userId: user.id,
+      });
+
+      // Persist session to session store
+      const sessionStore = getSessionStore();
+      await sessionStore.createSession({
+        userId: user.id,
+        tokenHash: hashToken(refreshToken),
+        familyId,
+        jti,
+        expiresAt,
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+      });
 
       return {
         user: {
@@ -110,7 +134,6 @@ export class AuthService {
         refreshToken,
       };
     } catch (error: any) {
-      // Prisma duplicate key code P2002
       if (error.code === 'P2002') {
         throw new ConflictError('An account with this email address already exists');
       }
@@ -119,10 +142,15 @@ export class AuthService {
   }
 
   /**
-   * Authenticate a user with email and password across all roles (Admin, Staff, Customer).
+   * Authenticate a user across all roles (Admin, Staff, Customer).
+   * Creates a persistent session record with token family tracking.
    */
-  async login(dto: LoginDto): Promise<AuthSessionResponse & { refreshToken: string }> {
-    const normalizedEmail = dto.email.toLowerCase().trim();
+  async login(
+    dto: LoginDto,
+    meta?: RequestClientMetadata
+  ): Promise<AuthSessionResponse & { refreshToken: string }> {
+    const normalizedEmail = dto.email.normalize('NFKC').toLowerCase().trim();
+    const normalizedPassword = normalizePassword(dto.password);
 
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail },
@@ -150,7 +178,7 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    const isMatch = await comparePassword(dto.password, user.passwordHash);
+    const isMatch = await comparePassword(normalizedPassword, user.passwordHash);
     if (!isMatch) {
       logger.warn(`[Auth] Failed login attempt: incorrect password for ${normalizedEmail}`);
       throw new UnauthorizedError('Invalid email or password');
@@ -169,7 +197,21 @@ export class AuthService {
       role: user.role,
     });
 
-    const { token: refreshToken } = generateRefreshToken({ userId: user.id });
+    const { token: refreshToken, jti, familyId, expiresAt } = generateRefreshToken({
+      userId: user.id,
+    });
+
+    // Persist session to session store
+    const sessionStore = getSessionStore();
+    await sessionStore.createSession({
+      userId: user.id,
+      tokenHash: hashToken(refreshToken),
+      familyId,
+      jti,
+      expiresAt,
+      ipAddress: meta?.ipAddress,
+      userAgent: meta?.userAgent,
+    });
 
     return {
       user: {
@@ -185,65 +227,132 @@ export class AuthService {
   }
 
   /**
-   * Rotate a Refresh Token and issue a new Access Token.
+   * Rotate a Refresh Token with family reuse detection.
+   * If a revoked or already rotated token is presented, the ENTIRE token family is immediately revoked.
    */
-  async refreshSession(oldRefreshToken: string): Promise<AuthSessionResponse & { newRefreshToken: string }> {
+  async refreshSession(
+    oldRefreshToken: string,
+    meta?: RequestClientMetadata
+  ): Promise<AuthSessionResponse & { newRefreshToken: string }> {
     if (!oldRefreshToken) {
       throw new UnauthorizedError('Refresh token is required');
     }
 
-    const payload = verifyRefreshToken(oldRefreshToken);
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
-      include: {
-        customerProfile: {
-          select: { id: true, contactName: true, companyName: true },
-        },
-        staffProfile: {
-          select: { id: true, department: true, title: true },
-        },
-      },
-    });
-
-    if (!user || !user.isActive) {
-      throw new UnauthorizedError('User account not found or deactivated');
+    let payload;
+    try {
+      payload = verifyRefreshToken(oldRefreshToken);
+    } catch (err: any) {
+      throw new UnauthorizedError(err.message || 'Invalid or malformed refresh token');
     }
 
-    // Revoke old refresh token JTI immediately (Rotation & Replay Prevention)
-    revokeRefreshToken(payload.jti);
+    const oldTokenHash = hashToken(oldRefreshToken);
+    if (inFlightTokenRotations.has(oldTokenHash)) {
+      throw new UnauthorizedError('Simultaneous token refresh in progress. Please retry.');
+    }
+    inFlightTokenRotations.add(oldTokenHash);
 
-    const accessToken = generateAccessToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
+    try {
+      const sessionStore = getSessionStore();
 
-    const { token: newRefreshToken } = generateRefreshToken({ userId: user.id });
+      // 1. Look up session in persistent store
+      const session = await sessionStore.findSessionByTokenHash(oldTokenHash);
 
-    return {
-      user: {
-        id: user.id,
+      // 2. Refresh Token Reuse Detection
+      if (!session) {
+        // Check if JTI was recorded under a rotated hash
+        const sessionByJti = await sessionStore.findSessionByJti(payload.jti);
+        if (sessionByJti && sessionByJti.isRevoked) {
+          await sessionStore.revokeFamily(sessionByJti.familyId);
+          logger.error(`[Security Alert] Token reuse detected via JTI ${payload.jti}. Revoked family ${sessionByJti.familyId}.`);
+          throw new UnauthorizedError('Refresh token reuse detected. All active sessions in this family have been terminated.');
+        }
+        throw new UnauthorizedError('Invalid or unrecognised refresh token');
+      }
+
+      if (session.isRevoked) {
+        // CRITICAL REUSE DETECTED: An already revoked/rotated token was presented again!
+        await sessionStore.revokeFamily(session.familyId);
+        logger.error(`[Security Alert] Revoked token presented again: family ${session.familyId}. Revoked entire family.`);
+        throw new UnauthorizedError('Refresh token reuse detected. All active sessions in this family have been terminated.');
+      }
+
+      if (session.expiresAt.getTime() < Date.now()) {
+        await sessionStore.revokeSession(session.id);
+        throw new UnauthorizedError('Refresh token has expired. Please log in again.');
+      }
+
+      // 3. Verify user active status
+      const user = await prisma.user.findUnique({
+        where: { id: payload.sub },
+        include: {
+          customerProfile: { select: { id: true, contactName: true, companyName: true } },
+          staffProfile: { select: { id: true, department: true, title: true } },
+        },
+      });
+
+      if (!user || !user.isActive) {
+        await sessionStore.revokeFamily(session.familyId);
+        throw new UnauthorizedError('User account not found or deactivated');
+      }
+
+      // 4. Safe Rotation: Issue new token keeping the same familyId
+      const { token: newRefreshToken, jti: newJti, expiresAt: newExpiresAt } = generateRefreshToken({
+        userId: user.id,
+        familyId: session.familyId,
+      });
+
+      const newTokenHash = hashToken(newRefreshToken);
+
+      // Persist new session
+      await sessionStore.createSession({
+        userId: user.id,
+        tokenHash: newTokenHash,
+        familyId: session.familyId,
+        jti: newJti,
+        expiresAt: newExpiresAt,
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+      });
+
+      // Revoke old session and link to the replacement
+      await sessionStore.revokeSession(session.id, newTokenHash);
+
+      const accessToken = generateAccessToken({
+        userId: user.id,
         email: user.email,
         role: user.role,
-        customerProfile: user.customerProfile,
-        staffProfile: user.staffProfile,
-      },
-      accessToken,
-      newRefreshToken,
-    };
+      });
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          customerProfile: user.customerProfile,
+          staffProfile: user.staffProfile,
+        },
+        accessToken,
+        newRefreshToken,
+      };
+    } finally {
+      inFlightTokenRotations.delete(oldTokenHash);
+    }
   }
 
   /**
-   * Invalidate a session and revoke the current refresh token.
+   * Invalidate a session and revoke the refresh token in persistent storage.
    */
   async logout(refreshToken?: string): Promise<void> {
     if (refreshToken) {
       try {
-        const payload = verifyRefreshToken(refreshToken);
-        revokeRefreshToken(payload.jti);
+        const tokenHash = hashToken(refreshToken);
+        const sessionStore = getSessionStore();
+        const session = await sessionStore.findSessionByTokenHash(tokenHash);
+        if (session) {
+          await sessionStore.revokeSession(session.id);
+        }
       } catch {
-        // Token was already invalid, expired, or corrupted
+        // Token was invalid or already expired
       }
     }
   }
@@ -254,7 +363,7 @@ export class AuthService {
    * Always returns a generic response to prevent user enumeration.
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = email.normalize('NFKC').toLowerCase().trim();
 
     try {
       const user = await prisma.user.findUnique({
@@ -265,12 +374,11 @@ export class AuthService {
       });
 
       if (user && user.isActive) {
-        // Generate secure 32-byte cryptographic token
         const rawToken = generateSecureRandomToken();
         const tokenHash = hashToken(rawToken);
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
 
-        // Revoke any prior unused reset tokens for this user
+        // Invalidate prior unused reset tokens for this user
         await prisma.passwordResetToken.deleteMany({
           where: {
             userId: user.id,
@@ -287,7 +395,7 @@ export class AuthService {
           },
         });
 
-        // Send email with raw token
+        // Send email with raw token (safe dev logging in development; strict fail-safe in production)
         await sendPasswordResetEmail({
           toEmail: user.email,
           resetToken: rawToken,
@@ -307,11 +415,15 @@ export class AuthService {
   }
 
   /**
-   * Complete password reset using token and verify strict password policies.
+   * Complete password reset using token.
+   * Uses atomic conditional updates to prevent concurrent race conditions on token reuse,
+   * updates password, and revokes ALL persistent user sessions.
    */
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    // 1. Enforce password policy
-    const policy = validatePasswordPolicy(dto.password);
+    const normalizedPassword = normalizePassword(dto.password);
+
+    // 1. Enforce password policy (including 72-byte guard)
+    const policy = validatePasswordPolicy(normalizedPassword);
     if (!policy.isValid) {
       throw new ValidationError('Password policy violation', policy.errors);
     }
@@ -319,46 +431,46 @@ export class AuthService {
     // 2. Hash raw token to match stored database hash
     const tokenHash = hashToken(dto.token);
 
-    const resetTokenRecord = await prisma.passwordResetToken.findUnique({
+    // 3. Atomically consume the token to prevent concurrent token reuse
+    const consumeResult = await prisma.passwordResetToken.updateMany({
+      where: {
+        tokenHash,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+
+    if (consumeResult.count === 0) {
+      throw new ValidationError('Invalid, expired, or already used password reset link');
+    }
+
+    // 4. Retrieve user associated with the consumed token
+    const tokenRecord = await prisma.passwordResetToken.findUnique({
       where: { tokenHash },
       include: { user: true },
     });
 
-    if (!resetTokenRecord) {
-      throw new ValidationError('Invalid or expired password reset link');
+    if (!tokenRecord || !tokenRecord.user.isActive) {
+      throw new UnauthorizedError('User account not found or deactivated');
     }
 
-    if (resetTokenRecord.usedAt !== null) {
-      throw new ValidationError('This password reset link has already been used');
-    }
+    // 5. Hash new password
+    const newPasswordHash = await hashPassword(normalizedPassword);
 
-    if (resetTokenRecord.expiresAt < new Date()) {
-      throw new ValidationError('This password reset link has expired');
-    }
+    // 6. Update user password
+    await prisma.user.update({
+      where: { id: tokenRecord.userId },
+      data: { passwordHash: newPasswordHash },
+    });
 
-    if (!resetTokenRecord.user.isActive) {
-      throw new UnauthorizedError('This account has been deactivated');
-    }
+    // 7. Revoke ALL persistent sessions for this user across all devices
+    const sessionStore = getSessionStore();
+    await sessionStore.revokeAllUserSessions(tokenRecord.userId);
 
-    // 3. Hash new password
-    const newPasswordHash = await hashPassword(dto.password);
-
-    // 4. Update password and mark token used atomically
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: resetTokenRecord.userId },
-        data: { passwordHash: newPasswordHash },
-      }),
-      prisma.passwordResetToken.update({
-        where: { id: resetTokenRecord.id },
-        data: { usedAt: new Date() },
-      }),
-    ]);
-
-    // 5. Invalidate all active sessions for this user
-    revokeAllUserTokens(resetTokenRecord.userId);
-
-    logger.info(`[Auth] Password successfully reset for user: ${resetTokenRecord.user.email}`);
+    logger.info(`[Auth] Password successfully reset for user: ${tokenRecord.user.email}. All sessions revoked.`);
 
     return {
       message: 'Your password has been successfully reset. You may now log in with your new credentials.',

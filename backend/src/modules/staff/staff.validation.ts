@@ -6,6 +6,9 @@ const passwordValidation = z
   .refine((val) => val.length > 8, {
     message: 'Password must contain more than 8 characters',
   })
+  .refine((val) => Buffer.byteLength(val, 'utf8') <= 72, {
+    message: 'Password cannot exceed 72 bytes in length (bcrypt limitation)',
+  })
   .refine((val) => /[A-Z]/.test(val), {
     message: 'Password must contain at least one uppercase letter',
   })

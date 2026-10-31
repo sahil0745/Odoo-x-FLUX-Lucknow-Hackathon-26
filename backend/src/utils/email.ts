@@ -12,7 +12,7 @@ export interface EmailSendResult {
   success: boolean;
   isMock: boolean;
   messageId?: string;
-  resetUrl: string;
+  resetUrl?: string;
 }
 
 /**
@@ -35,16 +35,29 @@ function createTransporter() {
 
 /**
  * Sends a password reset email to a user with their secure, single-use token.
- * Falls back to an observable development log adapter if SMTP is unconfigured.
+ * 
+ * Security Guard:
+ * - Production: If SMTP is unconfigured, logs a critical error and aborts safely. Never leaks tokens to console.
+ * - Development: Emits observable link to stdout strictly when NODE_ENV !== 'production'.
  */
 export async function sendPasswordResetEmail(options: SendPasswordResetOptions): Promise<EmailSendResult> {
   const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${options.resetToken}`;
   const transporter = createTransporter();
 
   if (!transporter) {
-    // Development fallback adapter: log safe observable link to stdout for local testing
-    logger.info(`[Email Service - Dev Adapter] Password reset requested for ${options.toEmail}`);
-    logger.info(`[Email Service - Dev Adapter] Reset Link: ${resetUrl}`);
+    if (env.NODE_ENV === 'production') {
+      logger.error(
+        '[Email Service - Critical] SMTP credentials are not configured in production. Password reset email aborted.'
+      );
+      return {
+        success: false,
+        isMock: false,
+      };
+    }
+
+    // Explicitly restricted to non-production environments
+    logger.info(`[Email Service - Dev Adapter] Password reset initiated for ${options.toEmail}`);
+    logger.info(`[Email Service - Dev Adapter] Safe Local Reset Link: ${resetUrl}`);
     return {
       success: true,
       isMock: true,
@@ -79,15 +92,12 @@ export async function sendPasswordResetEmail(options: SendPasswordResetOptions):
       success: true,
       isMock: false,
       messageId: info.messageId,
-      resetUrl,
     };
   } catch (error) {
     logger.error(`[Email Service] Failed to send email to ${options.toEmail}:`, error);
-    // Return gracefully with error state; do not crash caller
     return {
       success: false,
       isMock: false,
-      resetUrl,
     };
   }
 }

@@ -1,5 +1,9 @@
 # Brightloop Subscription Management System — Authentication Setup & Operations Guide
 
+> **Document Version:** 1.1 (Security Hardened & Audited)  
+> **Target Frameworks:** Express.js 4 (Node.js 20) & React 18 (Vite)  
+> **Database ORM:** Prisma ORM 5.x on PostgreSQL 16
+
 ---
 
 ## 1. Environment Configuration
@@ -14,7 +18,7 @@ API_PREFIX=/api/v1
 CORS_ORIGIN=http://localhost:5173
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/brightloop_subscriptions?schema=public"
 
-# Frontend URL
+# Frontend URL & App Defaults
 FRONTEND_URL="http://localhost:5173"
 DEFAULT_CURRENCY="USD"
 
@@ -24,13 +28,16 @@ JWT_REFRESH_SECRET="default_dev_refresh_secret_min_32_characters_long_12345"
 JWT_ACCESS_EXPIRES_IN="15m"
 JWT_REFRESH_EXPIRES_IN="7d"
 
-# Optional SMTP Mailer (Leave blank to use console logger dev adapter)
+# Optional SMTP Mailer (Leave blank in development for console logger adapter)
 SMTP_HOST=""
 SMTP_PORT="587"
 SMTP_USER=""
 SMTP_PASS=""
 SMTP_FROM="Brightloop Security <noreply@brightloop.local>"
 ```
+
+> [!NOTE]
+> In production environments (`NODE_ENV=production`), `CORS_ORIGIN` must match `FRONTEND_URL` and wildcard `*` is strictly forbidden when credentials are enabled. Furthermore, valid SMTP credentials are mandatory for password reset operation.
 
 ---
 
@@ -68,34 +75,43 @@ SUCCESS! Administrator account provisioned:
 
 ---
 
-## 3. Running Authentication Tests
+## 3. Running Authentication & Security Tests
 
-Execute the automated test suite covering password policy, token cryptography, RBAC matrix, and API middleware:
+Execute the automated test suite covering password policy, token cryptography, persistent session store, token family rotation, RBAC matrix, and API middleware:
 
 ```powershell
 cd backend
 npm test
 ```
 
-### Verification Counts:
-- **Test Files:** 7 passed
-- **Tests Executed:** 37 passed
+### Current Verification Results:
+- **Test Files:** 8 passed (8 total)
+  - `tests/health.test.ts` (2 tests)
+  - `tests/database-integrity.test.ts` (4 tests)
+  - `tests/password-policy.test.ts` (6 tests)
+  - `tests/token-security.test.ts` (5 tests)
+  - `tests/auth-validation.test.ts` (4 tests)
+  - `tests/rbac-permissions.test.ts` (8 tests)
+  - `tests/auth-api.test.ts` (8 tests)
+  - `tests/security-audit.test.ts` (10 tests)
+- **Tests Executed:** 47 passed
 - **Status:** 100% Passing
 
 ---
 
 ## 4. Pending Live PostgreSQL Integration Steps
 
-As noted, the PostgreSQL daemon is currently offline on the host system. When PostgreSQL 16 is started (via Docker Desktop `docker compose up -d` or native PostgreSQL):
+As noted, PostgreSQL activation is deferred while host database services are offline. When PostgreSQL 16 is started:
 
-1. **Apply Existing Baseline Migration:**
+1. **Apply Migrations to Live Database:**
    ```powershell
    cd backend
-   npx prisma migrate deploy
+   npx prisma migrate dev --name init_and_sessions
    ```
+   *Note: This will provision both the initial 24 business domain tables and the new `refresh_token_sessions` table.*
 2. **Execute Administrator Bootstrap:**
    ```powershell
    npx tsx scripts/bootstrap_admin.ts
    ```
 3. **Verify Live Database Sign-in:**
-   Start backend (`npm run dev`) and frontend (`npm run dev`), then sign in at `http://localhost:5173/login`.
+   Run the dev servers (`npm run dev` in backend and frontend) and log in with the bootstrapped admin credentials.

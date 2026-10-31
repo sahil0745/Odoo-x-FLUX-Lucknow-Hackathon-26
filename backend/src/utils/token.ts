@@ -13,14 +13,9 @@ export interface AccessTokenPayload {
 export interface RefreshTokenPayload {
   sub: string; // User ID
   jti: string; // Unique Token Identifier
+  familyId: string; // Token family for rotation & reuse tracking
   type: 'refresh';
 }
-
-// In-memory revocation set for blacklisted refresh tokens (JTIs)
-const revokedTokenJtis = new Set<string>();
-
-// User token versions: revoking all sessions for a user (e.g. on password reset)
-const userTokenVersions = new Map<string, number>();
 
 /**
  * Generate a cryptographically strong random token (64 hex characters)
@@ -58,12 +53,19 @@ export function generateAccessToken(payload: { userId: string; email: string; ro
 
 /**
  * Generate a long-lived rotating Refresh Token (default: 7 days)
+ * Embeds a unique JTI and Family ID for reuse detection and family revocation.
  */
-export function generateRefreshToken(payload: { userId: string }): { token: string; jti: string } {
+export function generateRefreshToken(payload: {
+  userId: string;
+  familyId?: string;
+}): { token: string; jti: string; familyId: string; expiresAt: Date } {
   const jti = crypto.randomUUID();
+  const familyId = payload.familyId || crypto.randomUUID();
+
   const tokenPayload: RefreshTokenPayload = {
     sub: payload.userId,
     jti,
+    familyId,
     type: 'refresh',
   };
 
@@ -72,8 +74,26 @@ export function generateRefreshToken(payload: { userId: string }): { token: stri
   };
 
   const token = jwt.sign(tokenPayload, env.JWT_REFRESH_SECRET, options);
-  return { token, jti };
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  return { token, jti, familyId, expiresAt };
 }
+
+// In-memory revocation cache for lightweight unit-test assertions & fallback
+const inMemoryRevokedJtis = new Set<string>();
+
+export function revokeRefreshToken(jti: string): void {
+  inMemoryRevokedJtis.add(jti);
+}
+
+export function isRefreshTokenRevoked(jti: string): boolean {
+  return inMemoryRevokedJtis.has(jti);
+}
+
+export function revokeAllUserTokens(userId: string): void {
+  // Backward compatibility stub; primary session revocation uses sessionStore.revokeAllUserSessions
+}
+
 
 /**
  * Verify and decode an Access Token
@@ -95,31 +115,10 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
     throw new Error('Invalid token type: Expected refresh token');
   }
 
-  if (isRefreshTokenRevoked(decoded.jti)) {
+  if (inMemoryRevokedJtis.has(decoded.jti)) {
     throw new Error('Refresh token has been revoked or replayed');
   }
 
   return decoded;
 }
 
-/**
- * Revoke a refresh token by JTI
- */
-export function revokeRefreshToken(jti: string): void {
-  revokedTokenJtis.add(jti);
-}
-
-/**
- * Check if a refresh token has been revoked
- */
-export function isRefreshTokenRevoked(jti: string): boolean {
-  return revokedTokenJtis.has(jti);
-}
-
-/**
- * Revoke all active sessions for a user (e.g. on password change)
- */
-export function revokeAllUserTokens(userId: string): void {
-  const currentVersion = userTokenVersions.get(userId) || 0;
-  userTokenVersions.set(userId, currentVersion + 1);
-}

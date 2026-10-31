@@ -2,14 +2,15 @@ import { Router } from 'express';
 import { authController } from './auth.controller';
 import { authenticate } from '../../middleware/authenticate';
 import { loginRateLimiter, forgotPasswordRateLimiter } from '../../middleware/rateLimiter';
+import { verifyCsrfOrigin } from '../../middleware/csrfProtection';
 
 const router = Router();
 
 // Public Authentication Endpoints
 router.post('/register', (req, res, next) => authController.register(req, res, next));
 router.post('/login', loginRateLimiter, (req, res, next) => authController.login(req, res, next));
-router.post('/refresh', (req, res, next) => authController.refresh(req, res, next));
-router.post('/logout', (req, res, next) => authController.logout(req, res, next));
+router.post('/refresh', verifyCsrfOrigin, (req, res, next) => authController.refresh(req, res, next));
+router.post('/logout', verifyCsrfOrigin, (req, res, next) => authController.logout(req, res, next));
 router.post('/forgot-password', forgotPasswordRateLimiter, (req, res, next) => authController.forgotPassword(req, res, next));
 router.post('/reset-password', (req, res, next) => authController.resetPassword(req, res, next));
 

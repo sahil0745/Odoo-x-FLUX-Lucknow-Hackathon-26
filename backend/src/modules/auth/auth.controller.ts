@@ -25,7 +25,8 @@ export class AuthController {
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validated = customerRegisterSchema.parse(req.body);
-      const result = await authService.registerCustomer(validated);
+      const clientMeta = { ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+      const result = await authService.registerCustomer(validated, clientMeta);
 
       // Set rotating refresh token in secure HttpOnly cookie
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
@@ -49,7 +50,8 @@ export class AuthController {
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validated = loginSchema.parse(req.body);
-      const result = await authService.login(validated);
+      const clientMeta = { ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+      const result = await authService.login(validated, clientMeta);
 
       res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, REFRESH_COOKIE_OPTIONS);
 
@@ -72,7 +74,8 @@ export class AuthController {
   async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oldRefreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || req.body?.refreshToken;
-      const result = await authService.refreshSession(oldRefreshToken);
+      const clientMeta = { ipAddress: req.ip, userAgent: req.headers['user-agent'] };
+      const result = await authService.refreshSession(oldRefreshToken, clientMeta);
 
       res.cookie(REFRESH_COOKIE_NAME, result.newRefreshToken, REFRESH_COOKIE_OPTIONS);
 

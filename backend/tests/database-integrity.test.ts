@@ -76,7 +76,8 @@ describe('Database Architecture & Model Integrity (Audited v1.1)', () => {
     expect(modelNames).toContain('Payment');
     expect(modelNames).toContain('PaymentAllocation');
     expect(modelNames).toContain('AuditLog');
-    expect(modelNames.length).toBe(25); // 24 domain models + SystemMeta
+    expect(modelNames).toContain('RefreshTokenSession'); // Master Prompt 04A persistent session management
+    expect(modelNames.length).toBe(26); // 24 domain models + RefreshTokenSession + SystemMeta
   });
 
   it('ensures Prisma Decimal eliminates floating-point rounding errors', () => {

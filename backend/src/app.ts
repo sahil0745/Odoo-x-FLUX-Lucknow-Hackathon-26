@@ -17,21 +17,25 @@ export function createApp(): Application {
   // 2. Cookie parser for HttpOnly refresh tokens
   app.use(cookieParser());
 
-  // 3. CORS configuration
+  // 3. CORS configuration (Strict explicit origins, zero wildcards with credentials)
   const allowedOrigins = env.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+  if (env.FRONTEND_URL && !allowedOrigins.includes(env.FRONTEND_URL)) {
+    allowedOrigins.push(env.FRONTEND_URL);
+  }
+
   app.use(
     cors({
       origin: (origin, callback) => {
         // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        if (allowedOrigins.includes(origin) && origin !== '*') {
           return callback(null, true);
         }
-        return callback(new Error(`Origin ${origin} not allowed by CORS policy`));
+        return callback(new Error(`Origin '${origin}' not permitted by CORS policy`));
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     })
   );
 
