@@ -243,7 +243,7 @@ export const PlansPage: React.FC = () => {
                 <div className="my-4 pb-4 border-b border-slate-800">
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-extrabold text-white">
-                      ${plan.price.toFixed(2)}
+                      ${Number(plan.price).toFixed(2)}
                     </span>
                     <span className="text-xs text-slate-400">
                       /{plan.billingFrequency.toLowerCase()}

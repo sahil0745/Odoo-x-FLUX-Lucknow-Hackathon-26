@@ -9,8 +9,14 @@ import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { UnauthorizedPage } from '../pages/auth/UnauthorizedPage';
 import { StaffManagementPage } from '../pages/admin/StaffManagementPage';
-import { ProductsPage } from '../pages/products/ProductsPage';
-import { PlansPage } from '../pages/plans/PlansPage';
+import { ProductListPage } from '../pages/products/ProductListPage';
+import { AddProductPage } from '../pages/products/AddProductPage';
+import { ProductDetailsPage } from '../pages/products/ProductDetailsPage';
+import { EditProductPage } from '../pages/products/EditProductPage';
+import { PlanListPage } from '../pages/plans/PlanListPage';
+import { AddPlanPage } from '../pages/plans/AddPlanPage';
+import { PlanDetailsPage } from '../pages/plans/PlanDetailsPage';
+import { EditPlanPage } from '../pages/plans/EditPlanPage';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 
 export const AppRoutes: React.FC = () => {
@@ -25,20 +31,70 @@ export const AppRoutes: React.FC = () => {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-        {/* Protected Catalog & Plan Routes (Authenticated Admin, Staff, Customer) */}
+        {/* Product Catalog & Management Routes */}
         <Route
           path="/products"
           element={
             <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
-              <ProductsPage />
+              <ProductListPage />
             </ProtectedRoute>
           }
         />
         <Route
+          path="/products/new"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AddProductPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products/:id"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <ProductDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <EditProductPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Subscription Plan Management Routes */}
+        <Route
           path="/plans"
           element={
             <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
-              <PlansPage />
+              <PlanListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans/new"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AddPlanPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans/:id"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <PlanDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans/:id/edit"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <EditPlanPage />
             </ProtectedRoute>
           }
         />

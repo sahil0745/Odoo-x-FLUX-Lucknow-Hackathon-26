@@ -2,56 +2,144 @@ import { apiClient } from './api';
 import {
   SubscriptionPlan,
   CreatePlanPayload,
+  UpdatePlanPayload,
+  QuantityValidationResult,
+  BillingCycleResult,
+  PaginationMeta,
   BillingFrequency,
 } from '../types';
 
+export interface PlanListResponse {
+  success: boolean;
+  data: {
+    plans: SubscriptionPlan[];
+    pagination: PaginationMeta;
+  };
+}
+
+export interface SinglePlanResponse {
+  success: boolean;
+  message?: string;
+  data: {
+    plan: SubscriptionPlan;
+  };
+}
+
+export interface QuantityValidationResponse {
+  success: boolean;
+  data: {
+    validation: QuantityValidationResult;
+  };
+}
+
+export interface BillingCycleResponse {
+  success: boolean;
+  data: BillingCycleResult;
+}
+
 export const planService = {
   /**
-   * Fetch all subscription plans with optional filters
+   * Fetch paginated list of subscription plans with optional search, frequency, and status filters.
+   */
+  async getPlans(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    billingFrequency?: BillingFrequency;
+    isActive?: boolean | string;
+    availability?: 'all' | 'available' | 'upcoming' | 'expired';
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{ plans: SubscriptionPlan[]; pagination: PaginationMeta }> {
+    const response = await apiClient.get<PlanListResponse>('/plans', {
+      params,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Backward-compatible list helper used by catalog pages/tests.
    */
   async listPlans(filters?: {
     billingFrequency?: BillingFrequency;
     isActive?: boolean;
     activeOnly?: boolean;
   }): Promise<SubscriptionPlan[]> {
-    const params = new URLSearchParams();
-    if (filters?.billingFrequency) params.append('billingFrequency', filters.billingFrequency);
-    if (filters?.isActive !== undefined) params.append('isActive', String(filters.isActive));
-    if (filters?.activeOnly !== undefined) params.append('activeOnly', String(filters.activeOnly));
-
-    const res = await apiClient.get(`/plans?${params.toString()}`);
-    return res.data.data;
+    const response = await apiClient.get<{ success: boolean; data: SubscriptionPlan[] }>('/plans', {
+      params: filters,
+    });
+    return response.data.data;
   },
 
   /**
-   * Fetch single plan by ID
+   * Fetch single subscription plan by ID.
    */
   async getPlanById(id: string): Promise<SubscriptionPlan> {
-    const res = await apiClient.get(`/plans/${id}`);
-    return res.data.data;
+    const response = await apiClient.get<SinglePlanResponse>(`/plans/${id}`);
+    return (response.data.data as any).plan ?? (response.data.data as any);
   },
 
   /**
-   * Create new plan (Admin only)
+   * Create a new subscription plan (Admin only).
    */
   async createPlan(payload: CreatePlanPayload): Promise<SubscriptionPlan> {
-    const res = await apiClient.post('/plans', payload);
-    return res.data.data;
+    const response = await apiClient.post<SinglePlanResponse>('/plans', payload);
+    return (response.data.data as any).plan ?? (response.data.data as any);
   },
 
   /**
-   * Update plan (Admin only)
+   * Update plan configuration (Admin only).
    */
-  async updatePlan(id: string, payload: Partial<CreatePlanPayload>): Promise<SubscriptionPlan> {
-    const res = await apiClient.put(`/plans/${id}`, payload);
-    return res.data.data;
+  async updatePlan(id: string, payload: UpdatePlanPayload | Partial<CreatePlanPayload>): Promise<SubscriptionPlan> {
+    const response = await apiClient.patch<SinglePlanResponse>(`/plans/${id}`, payload);
+    return (response.data.data as any).plan ?? (response.data.data as any);
   },
 
   /**
-   * Delete or archive plan (Admin only)
+   * Toggle plan active/inactive status (Admin only).
    */
-  async deletePlan(id: string): Promise<{ message: string; plan?: SubscriptionPlan }> {
-    const res = await apiClient.delete(`/plans/${id}`);
-    return res.data;
+  async updatePlanStatus(id: string, isActive: boolean): Promise<SubscriptionPlan> {
+    const response = await apiClient.patch<SinglePlanResponse>(`/plans/${id}/status`, {
+      isActive,
+    });
+    return (response.data.data as any).plan ?? (response.data.data as any);
+  },
+
+  /**
+   * Delete unreferenced plan (Admin only).
+   */
+  async deletePlan(id: string): Promise<{ success?: boolean; message: string; plan?: SubscriptionPlan }> {
+    const response = await apiClient.delete<{ success?: boolean; message: string; plan?: SubscriptionPlan }>(
+      `/plans/${id}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Validate requested quantity against plan minimum quantity.
+   */
+  async validateQuantity(id: string, quantity: number): Promise<QuantityValidationResult> {
+    const response = await apiClient.post<QuantityValidationResponse>(`/plans/${id}/validate-quantity`, {
+      quantity,
+    });
+    return response.data.data.validation;
+  },
+
+  /**
+   * Calculate next billing date utility.
+   */
+  async calculateNextBillingDate(
+    startDate: string,
+    billingFrequency: BillingFrequency,
+    intervalCount: number = 1,
+    anchorDay?: number
+  ): Promise<BillingCycleResult> {
+    const response = await apiClient.post<BillingCycleResponse>('/plans/next-billing-date', {
+      startDate,
+      billingFrequency,
+      intervalCount,
+      anchorDay,
+    });
+    return response.data.data;
   },
 };

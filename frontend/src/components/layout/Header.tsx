@@ -4,14 +4,14 @@ import {
   Menu,
   X,
   Users,
+  Package,
+  Calendar,
   LogOut,
   LogIn,
   UserPlus,
   Shield,
   Briefcase,
   UserCheck,
-  Package,
-  Calendar,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -77,22 +77,20 @@ export const Header: React.FC = () => {
               Dashboard
             </Link>
 
-            {/* Authenticated Links */}
             {isAuthenticated && (
               <>
                 <Link
                   to="/products"
                   className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
                 >
-                  <Package className="w-4 h-4 text-slate-400" />
+                  <Package className="w-4 h-4 text-indigo-400" />
                   <span>Products & Variants</span>
                 </Link>
-
                 <Link
                   to="/plans"
                   className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
                 >
-                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <Calendar className="w-4 h-4 text-indigo-400" />
                   <span>Subscription Plans</span>
                 </Link>
               </>
@@ -166,7 +164,6 @@ export const Header: React.FC = () => {
             >
               Dashboard
             </Link>
-
             {isAuthenticated && (
               <>
                 <Link
@@ -174,21 +171,19 @@ export const Header: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
                 >
-                  <Package className="w-4 h-4 text-slate-400" />
+                  <Package className="w-4 h-4 text-indigo-400" />
                   <span>Products & Variants</span>
                 </Link>
-
                 <Link
                   to="/plans"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
                 >
-                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <Calendar className="w-4 h-4 text-indigo-400" />
                   <span>Subscription Plans</span>
                 </Link>
               </>
             )}
-
             {user?.role === 'ADMIN' && (
               <Link
                 to="/staff"

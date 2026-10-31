@@ -280,7 +280,7 @@ export const ProductsPage: React.FC = () => {
                         Sales Price
                       </div>
                       <div className="font-bold text-slate-100 text-base">
-                        ${product.salesPrice.toFixed(2)}
+                        ${Number(product.salesPrice).toFixed(2)}
                       </div>
                     </div>
                     <div>
@@ -288,7 +288,7 @@ export const ProductsPage: React.FC = () => {
                         Cost Price
                       </div>
                       <div className="text-slate-300">
-                        ${product.costPrice.toFixed(2)}
+                        ${Number(product.costPrice ?? 0).toFixed(2)}
                       </div>
                     </div>
                     <div>
@@ -338,7 +338,7 @@ export const ProductsPage: React.FC = () => {
                         <span>Additive Pricing Variants</span>
                       </div>
                       <span className="text-xs text-slate-500">
-                        Effective Price = Base (${product.salesPrice.toFixed(2)}) + Additive Surcharge
+                        Effective Price = Base (${Number(product.salesPrice).toFixed(2)}) + Additive Surcharge
                       </span>
                     </div>
 
@@ -362,11 +362,11 @@ export const ProductsPage: React.FC = () => {
                               </div>
                               <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
                                 <span className="text-emerald-400 font-medium">
-                                  +${v.additionalPrice.toFixed(2)}
+                                  +${Number(v.additionalPrice).toFixed(2)}
                                 </span>
                                 <span className="text-slate-600">→</span>
                                 <span className="text-slate-200 font-bold">
-                                  ${v.effectivePrice?.toFixed(2)}
+                                  ${Number(v.effectivePrice ?? 0).toFixed(2)}
                                 </span>
                               </div>
                             </div>
