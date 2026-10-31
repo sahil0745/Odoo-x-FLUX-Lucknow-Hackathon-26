@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 import { AppError } from '../utils/AppError';
 import { logger } from '../utils/logger';
 import { env } from '../config/env';
@@ -10,10 +11,22 @@ export function errorHandler(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction
 ): void {
-  const isAppError = err instanceof AppError;
-  const statusCode = isAppError ? err.statusCode : 500;
-  const message = isAppError ? err.message : 'Internal server error';
-  const details = isAppError ? err.details : undefined;
+  let statusCode = 500;
+  let message = 'Internal server error';
+  let details: any = undefined;
+
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
+    message = err.message;
+    details = err.details;
+  } else if (err instanceof ZodError) {
+    statusCode = 400;
+    message = 'Validation error';
+    details = err.errors.map((e) => ({
+      field: e.path.join('.'),
+      message: e.message,
+    }));
+  }
 
   logger.error(`[ErrorHandler] ${req.method} ${req.originalUrl} failed: ${err.message}`, {
     stack: err.stack,

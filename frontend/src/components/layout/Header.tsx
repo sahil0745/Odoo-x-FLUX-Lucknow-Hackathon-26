@@ -10,6 +10,8 @@ import {
   Shield,
   Briefcase,
   UserCheck,
+  Package,
+  Calendar,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -62,7 +64,7 @@ export const Header: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white tracking-tight text-lg">Brightloop</span>
                 <span className="text-[10px] uppercase font-semibold bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 tracking-wide">
-                  v1.0
+                  v1.2
                 </span>
               </div>
               <p className="text-xs text-slate-400 -mt-0.5">Subscription Management</p>
@@ -74,6 +76,27 @@ export const Header: React.FC = () => {
             <Link to="/" className="hover:text-indigo-400 transition-colors">
               Dashboard
             </Link>
+
+            {/* Authenticated Links */}
+            {isAuthenticated && (
+              <>
+                <Link
+                  to="/products"
+                  className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                >
+                  <Package className="w-4 h-4 text-slate-400" />
+                  <span>Products & Variants</span>
+                </Link>
+
+                <Link
+                  to="/plans"
+                  className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                >
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <span>Subscription Plans</span>
+                </Link>
+              </>
+            )}
 
             {/* Admin Specific Links */}
             {user?.role === 'ADMIN' && (
@@ -143,6 +166,29 @@ export const Header: React.FC = () => {
             >
               Dashboard
             </Link>
+
+            {isAuthenticated && (
+              <>
+                <Link
+                  to="/products"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
+                >
+                  <Package className="w-4 h-4 text-slate-400" />
+                  <span>Products & Variants</span>
+                </Link>
+
+                <Link
+                  to="/plans"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <span>Subscription Plans</span>
+                </Link>
+              </>
+            )}
+
             {user?.role === 'ADMIN' && (
               <Link
                 to="/staff"

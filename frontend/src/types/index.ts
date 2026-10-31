@@ -65,3 +65,96 @@ export interface ApiErrorResponse {
   message: string;
   details?: unknown;
 }
+
+// ------------------------------------------------------------------------------
+// Product & Variant Types
+// ------------------------------------------------------------------------------
+
+export type ProductType = 'SOFTWARE' | 'SERVICE' | 'ADD_ON';
+
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  variantType: string;
+  variantValue: string;
+  additionalPrice: number;
+  effectivePrice?: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  type: ProductType;
+  salesPrice: number;
+  costPrice: number;
+  marginPercent?: number;
+  notes?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  variants?: ProductVariant[];
+}
+
+export interface CreateProductPayload {
+  name: string;
+  type: ProductType;
+  salesPrice: number;
+  costPrice: number;
+  notes?: string;
+  isActive?: boolean;
+}
+
+export interface CreateVariantPayload {
+  variantType: string;
+  variantValue: string;
+  additionalPrice: number;
+  isActive?: boolean;
+}
+
+// ------------------------------------------------------------------------------
+// Subscription Plan Types
+// ------------------------------------------------------------------------------
+
+export type BillingFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  billingFrequency: BillingFrequency;
+  intervalCount: number;
+  minimumQuantity: number;
+  availableFrom: string;
+  availableUntil?: string | null;
+  allowAutoClose: boolean;
+  allowEarlyClose: boolean;
+  allowPause: boolean;
+  allowRenewal: boolean;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: {
+    subscriptions: number;
+    quotations: number;
+  };
+}
+
+export interface CreatePlanPayload {
+  name: string;
+  description?: string;
+  price: number;
+  billingFrequency: BillingFrequency;
+  intervalCount?: number;
+  minimumQuantity?: number;
+  availableFrom?: string;
+  availableUntil?: string | null;
+  allowAutoClose?: boolean;
+  allowEarlyClose?: boolean;
+  allowPause?: boolean;
+  allowRenewal?: boolean;
+  isActive?: boolean;
+}
