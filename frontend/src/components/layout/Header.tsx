@@ -6,12 +6,15 @@ import {
   Users,
   Package,
   Calendar,
+  FileText,
   LogOut,
   LogIn,
   UserPlus,
   Shield,
   Briefcase,
   UserCheck,
+  CreditCard,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -64,7 +67,7 @@ export const Header: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white tracking-tight text-lg">Brightloop</span>
                 <span className="text-[10px] uppercase font-semibold bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 tracking-wide">
-                  v1.0
+                  v1.3
                 </span>
               </div>
               <p className="text-xs text-slate-400 -mt-0.5">Subscription Management</p>
@@ -73,9 +76,19 @@ export const Header: React.FC = () => {
 
           {/* Desktop Role-Aware Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
-            <Link to="/" className="hover:text-indigo-400 transition-colors">
-              Dashboard
-            </Link>
+            {isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'STAFF') && (
+              <Link to="/dashboard" className="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+                <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+                <span>Dashboard</span>
+              </Link>
+            )}
+
+            {isAuthenticated && user?.role === 'CUSTOMER' && (
+              <Link to="/portal" className="hover:text-indigo-400 transition-colors flex items-center gap-1.5 text-indigo-300 font-semibold">
+                <UserCheck className="w-4 h-4 text-indigo-400" />
+                <span>Customer Portal</span>
+              </Link>
+            )}
 
             {isAuthenticated && (
               <>
@@ -92,6 +105,27 @@ export const Header: React.FC = () => {
                 >
                   <Calendar className="w-4 h-4 text-indigo-400" />
                   <span>Plans</span>
+                </Link>
+                <Link
+                  to="/subscriptions"
+                  className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                >
+                  <Layers className="w-4 h-4 text-indigo-400" />
+                  <span>Subscriptions</span>
+                </Link>
+                <Link
+                  to="/invoices"
+                  className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                >
+                  <FileText className="w-4 h-4 text-indigo-400" />
+                  <span>Invoices</span>
+                </Link>
+                <Link
+                  to="/payments"
+                  className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                >
+                  <CreditCard className="w-4 h-4 text-indigo-400" />
+                  <span>Payments</span>
                 </Link>
               </>
             )}
@@ -157,28 +191,76 @@ export const Header: React.FC = () => {
         {/* Mobile Dropdown */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-slate-800 space-y-3">
+            {isAuthenticated && (user?.role === 'ADMIN' || user?.role === 'STAFF') && (
+              <Link
+                to="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
+              >
+                <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+                <span>Executive Dashboard</span>
+              </Link>
+            )}
+
+            {isAuthenticated && user?.role === 'CUSTOMER' && (
+              <Link
+                to="/portal"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-lg text-base font-medium text-indigo-300 hover:bg-slate-800 flex items-center gap-2"
+              >
+                <UserCheck className="w-4 h-4 text-indigo-400" />
+                <span>Customer Portal</span>
+              </Link>
+            )}
+
             <Link
               to="/"
               onClick={() => setMobileMenuOpen(false)}
               className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800"
             >
-              Dashboard
+              Overview & Roadmap
             </Link>
             {isAuthenticated && (
               <>
                 <Link
                   to="/products"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800"
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
                 >
-                  Products
+                  <Package className="w-4 h-4 text-indigo-400" />
+                  <span>Products</span>
                 </Link>
                 <Link
                   to="/plans"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800"
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
                 >
-                  Subscription Plans
+                  <Calendar className="w-4 h-4 text-indigo-400" />
+                  <span>Subscription Plans</span>
+                </Link>
+                <Link
+                  to="/subscriptions"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
+                >
+                  <Layers className="w-4 h-4 text-indigo-400" />
+                  <span>Subscriptions</span>
+                </Link>
+                <Link
+                  to="/invoices"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4 text-indigo-400" />
+                  <span>Invoices & Billing</span>
+                </Link>
+                <Link
+                  to="/payments"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800 flex items-center gap-2"
+                >
+                  <CreditCard className="w-4 h-4 text-indigo-400" />
+                  <span>Payments</span>
                 </Link>
               </>
             )}
@@ -186,9 +268,10 @@ export const Header: React.FC = () => {
               <Link
                 to="/staff"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-lg text-base font-medium text-indigo-300 hover:bg-slate-800"
+                className="block px-3 py-2 rounded-lg text-base font-medium text-indigo-300 hover:bg-slate-800 flex items-center gap-2"
               >
-                Staff Management
+                <Users className="w-4 h-4 text-indigo-400" />
+                <span>Staff Management</span>
               </Link>
             )}
 

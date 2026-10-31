@@ -17,6 +17,13 @@ import { PlanListPage } from '../pages/plans/PlanListPage';
 import { AddPlanPage } from '../pages/plans/AddPlanPage';
 import { PlanDetailsPage } from '../pages/plans/PlanDetailsPage';
 import { EditPlanPage } from '../pages/plans/EditPlanPage';
+import { InvoiceListPage } from '../pages/invoices/InvoiceListPage';
+import { InvoiceDetailsPage } from '../pages/invoices/InvoiceDetailsPage';
+import { BillingLogsPage } from '../pages/invoices/BillingLogsPage';
+import { SubscriptionListPage } from '../pages/subscriptions/SubscriptionListPage';
+import { PaymentListPage } from '../pages/payments/PaymentListPage';
+import { ExecutiveDashboardPage } from '../pages/dashboard/ExecutiveDashboardPage';
+import { CustomerPortalPage } from '../pages/portal/CustomerPortalPage';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 
 export const AppRoutes: React.FC = () => {
@@ -95,6 +102,72 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <EditPlanPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Subscriptions & Contracts */}
+        <Route
+          path="/subscriptions"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <SubscriptionListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Invoices & Recurring Billing */}
+        <Route
+          path="/invoices"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <InvoiceListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:id"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <InvoiceDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing/logs"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF']}>
+              <BillingLogsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Payments Management */}
+        <Route
+          path="/payments"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <PaymentListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Executive & Staff Dashboard */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF']}>
+              <ExecutiveDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Customer Self-Service Portal */}
+        <Route
+          path="/portal"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'STAFF', 'CUSTOMER']}>
+              <CustomerPortalPage />
             </ProtectedRoute>
           }
         />
