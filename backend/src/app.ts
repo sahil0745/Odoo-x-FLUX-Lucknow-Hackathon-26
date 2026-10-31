@@ -46,13 +46,18 @@ export function createApp(): Application {
   // 5. Request Logging middleware
   app.use(requestLogger);
 
-  // 4. Mount versioned API routes
+  // 6. Root route redirect to API prefix
+  app.get('/', (_req, res) => {
+    res.redirect(env.API_PREFIX);
+  });
+
+  // 7. Mount versioned API routes
   app.use(env.API_PREFIX, v1Router);
 
-  // 5. 404 handler for unmatched routes
+  // 8. 404 handler for unmatched routes
   app.use(notFoundHandler);
 
-  // 6. Centralized error handling middleware
+  // 9. Centralized error handling middleware
   app.use(errorHandler);
 
   return app;

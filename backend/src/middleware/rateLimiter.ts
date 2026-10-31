@@ -37,8 +37,11 @@ export function createRateLimiter(options: RateLimiterOptions) {
   } = options;
 
   return (req: Request, res: Response, next: NextFunction): void => {
-    // In test environment, bypass rate limiting if requested
-    if (process.env.NODE_ENV === 'test' && !req.headers['x-test-rate-limit']) {
+    // In test or development environment, bypass rate limiting so setup/testing is not blocked
+    if (
+      (process.env.NODE_ENV === 'test' && !req.headers['x-test-rate-limit']) ||
+      process.env.NODE_ENV === 'development'
+    ) {
       return next();
     }
 

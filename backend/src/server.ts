@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './utils/logger';
 import { disconnectDatabase } from './config/database';
+import { startBillingScheduler, stopBillingScheduler } from './jobs/recurringBilling.job';
 
 const app = createApp();
 
@@ -12,11 +13,17 @@ const server = app.listen(env.PORT, () => {
   logger.info(` Port:        ${env.PORT}`);
   logger.info(` Health check: http://localhost:${env.PORT}${env.API_PREFIX}/health`);
   logger.info(`=======================================================`);
+
+  // Start background recurring billing scheduler if not in test environment
+  if (env.NODE_ENV !== 'test') {
+    startBillingScheduler();
+  }
 });
 
 // Graceful shutdown handling
 const handleGracefulShutdown = async (signal: string) => {
   logger.info(`Received ${signal}. Shutting down server gracefully...`);
+  stopBillingScheduler();
   server.close(async () => {
     logger.info('HTTP server closed.');
     await disconnectDatabase();

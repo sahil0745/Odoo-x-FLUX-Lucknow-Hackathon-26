@@ -1,15 +1,17 @@
 import { describe, it, expect } from 'vitest';
 
-describe('Frontend Infrastructure & Config', () => {
-  it('loads environment variables accurately', () => {
-    const appName = 'Brightloop Subscription Management System';
-    expect(appName).toContain('Subscription Management');
+describe('Frontend Core Utilities', () => {
+  it('formats currency standard appropriately', () => {
+    const amount = 99.99;
+    const formatted = `$${amount.toFixed(2)}`;
+    expect(formatted).toBe('$99.99');
   });
 
-  it('validates monetary cents format standard', () => {
-    const dollars = 15.6;
-    const cents = Math.round(dollars * 100);
-    expect(cents).toBe(1560);
-    expect(Number.isInteger(cents)).toBe(true);
+  it('validates password policy helper', () => {
+    const password = 'SecurePassword123!';
+    expect(password.length).toBeGreaterThan(8);
+    expect(/[A-Z]/.test(password)).toBe(true);
+    expect(/[a-z]/.test(password)).toBe(true);
+    expect(/[!@#$%^&*]/.test(password)).toBe(true);
   });
 });

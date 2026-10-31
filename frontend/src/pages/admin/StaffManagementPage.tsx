@@ -54,7 +54,8 @@ export const StaffManagementPage: React.FC = () => {
     setErrorMessage(null);
     try {
       const res = await apiClient.get('/staff');
-      setStaffList(res.data.data || []);
+      const sData = res.data.data;
+      setStaffList(Array.isArray(sData) ? sData : (sData?.items || []));
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to load staff accounts');
     } finally {

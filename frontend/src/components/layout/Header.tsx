@@ -3,7 +3,6 @@ import {
   Layers,
   Menu,
   X,
-  Users,
   LogOut,
   LogIn,
   UserPlus,
@@ -11,13 +10,14 @@ import {
   Briefcase,
   UserCheck,
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 
 export const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -49,12 +49,32 @@ export const Header: React.FC = () => {
     }
   };
 
+  const isLinkActive = (path: string) => {
+    return location.pathname === path;
+  };
+
+  const linkClass = (path: string) =>
+    `transition-colors flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold ${
+      isLinkActive(path)
+        ? 'bg-slate-800 text-indigo-400'
+        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+    }`;
+
+  const mobileLinkClass = (path: string) =>
+    `block px-3 py-2 rounded-lg text-sm font-semibold ${
+      isLinkActive(path)
+        ? 'bg-slate-800 text-indigo-400'
+        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+    }`;
+
+  const isAdminOrStaff = user?.role === 'ADMIN' || user?.role === 'STAFF';
+
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
-          <Link to="/" className="flex items-center gap-3">
+          <Link to={isAuthenticated ? '/dashboard' : '/'} className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
               <Layers className="w-5 h-5" />
             </div>
@@ -62,35 +82,76 @@ export const Header: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white tracking-tight text-lg">Brightloop</span>
                 <span className="text-[10px] uppercase font-semibold bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/30 tracking-wide">
-                  v1.0
+                  SaaS
                 </span>
               </div>
               <p className="text-xs text-slate-400 -mt-0.5">Subscription Management</p>
             </div>
           </Link>
 
-          {/* Desktop Role-Aware Navigation */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
-            <Link to="/" className="hover:text-indigo-400 transition-colors">
-              Dashboard
-            </Link>
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard" className={linkClass('/dashboard')}>
+                  Dashboard
+                </Link>
 
-            {/* Admin Specific Links */}
-            {user?.role === 'ADMIN' && (
-              <Link
-                to="/staff"
-                className="hover:text-indigo-400 transition-colors flex items-center gap-1.5 text-indigo-300 font-semibold"
-              >
-                <Users className="w-4 h-4 text-indigo-400" />
-                <span>Staff Management</span>
-              </Link>
+                {isAdminOrStaff && (
+                  <>
+                    <Link to="/customers" className={linkClass('/customers')}>
+                      Customers
+                    </Link>
+                    <Link to="/products" className={linkClass('/products')}>
+                      Products
+                    </Link>
+                  </>
+                )}
+
+                <Link to="/plans" className={linkClass('/plans')}>
+                  Plans
+                </Link>
+                <Link to="/quotations" className={linkClass('/quotations')}>
+                  Quotations
+                </Link>
+                <Link to="/subscriptions" className={linkClass('/subscriptions')}>
+                  Subscriptions
+                </Link>
+                <Link to="/invoices" className={linkClass('/invoices')}>
+                  Invoices
+                </Link>
+                <Link to="/payments" className={linkClass('/payments')}>
+                  Payments
+                </Link>
+
+                {isAdminOrStaff && (
+                  <Link to="/taxes-discounts" className={linkClass('/taxes-discounts')}>
+                    Taxes/Promos
+                  </Link>
+                )}
+
+                {user?.role === 'ADMIN' && (
+                  <Link to="/staff" className={linkClass('/staff')}>
+                    Staff
+                  </Link>
+                )}
+              </>
+            ) : (
+              <>
+                <Link to="/products" className={linkClass('/products')}>
+                  Products & Pricing
+                </Link>
+                <Link to="/plans" className={linkClass('/plans')}>
+                  Subscription Plans
+                </Link>
+              </>
             )}
           </nav>
 
           {/* User Account Controls */}
           <div className="hidden md:flex items-center gap-4">
             {isAuthenticated && user ? (
-              <div className="flex items-center gap-3 pl-4 border-l border-slate-800">
+              <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
                 <div className="text-right">
                   <div className="text-xs font-semibold text-slate-200">
                     {user.customerProfile?.contactName || user.email}
@@ -122,7 +183,7 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden">
+          <div className="flex lg:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
@@ -135,22 +196,60 @@ export const Header: React.FC = () => {
 
         {/* Mobile Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-slate-800 space-y-3">
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800"
-            >
-              Dashboard
-            </Link>
-            {user?.role === 'ADMIN' && (
-              <Link
-                to="/staff"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-lg text-base font-medium text-indigo-300 hover:bg-slate-800"
-              >
-                Staff Management
-              </Link>
+          <div className="lg:hidden py-4 border-t border-slate-800 space-y-2">
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/dashboard')}>
+                  Dashboard
+                </Link>
+                {isAdminOrStaff && (
+                  <>
+                    <Link to="/customers" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/customers')}>
+                      Customers
+                    </Link>
+                    <Link to="/products" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/products')}>
+                      Products & Variants
+                    </Link>
+                  </>
+                )}
+                <Link to="/plans" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/plans')}>
+                  Plans
+                </Link>
+                <Link to="/quotations" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/quotations')}>
+                  Quotations
+                </Link>
+                <Link to="/subscriptions" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/subscriptions')}>
+                  Subscriptions
+                </Link>
+                <Link to="/invoices" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/invoices')}>
+                  Invoices
+                </Link>
+                <Link to="/payments" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/payments')}>
+                  Payments
+                </Link>
+                {isAdminOrStaff && (
+                  <Link to="/taxes-discounts" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/taxes-discounts')}>
+                    Taxes & Discounts
+                  </Link>
+                )}
+                {user?.role === 'ADMIN' && (
+                  <Link to="/staff" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/staff')}>
+                    Staff Management
+                  </Link>
+                )}
+              </>
+            ) : (
+              <>
+                <Link to="/" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/')}>
+                  Home
+                </Link>
+                <Link to="/products" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/products')}>
+                  Products & Pricing
+                </Link>
+                <Link to="/plans" onClick={() => setMobileMenuOpen(false)} className={mobileLinkClass('/plans')}>
+                  Subscription Plans
+                </Link>
+              </>
             )}
 
             <div className="pt-3 border-t border-slate-800">

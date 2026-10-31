@@ -45,11 +45,21 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
         };
         return next();
       }
-    } catch {
-      // Database connection fallback (offline/testing mode)
+
+      // User was not found in the database
+      if (process.env.NODE_ENV !== 'test') {
+        return next(new UnauthorizedError('User account no longer exists or has been removed'));
+      }
+    } catch (dbErr: any) {
+      if (dbErr instanceof UnauthorizedError) {
+        return next(dbErr);
+      }
+      if (process.env.NODE_ENV !== 'test') {
+        return next(new UnauthorizedError('Authentication verification failed'));
+      }
     }
 
-    // Default to verified cryptographic token payload
+    // Default to verified cryptographic token payload (fallback in test mode)
     req.user = {
       id: payload.sub,
       email: payload.email,
