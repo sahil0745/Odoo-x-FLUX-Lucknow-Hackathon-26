@@ -65,3 +65,85 @@ export interface ApiErrorResponse {
   message: string;
   details?: unknown;
 }
+
+export type ProductType = 'SOFTWARE' | 'SERVICE' | 'ADD_ON';
+
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  variantType: string;
+  variantValue: string;
+  additionalPrice: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  type: ProductType;
+  salesPrice: string;
+  costPrice?: string; // Visible only to ADMIN
+  notes?: string | null; // Visible to ADMIN and STAFF
+  isActive: boolean;
+  variantCount?: number;
+  variants?: ProductVariant[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateVariantPayload {
+  variantType: string;
+  variantValue: string;
+  additionalPrice: string | number;
+}
+
+export interface CreateProductPayload {
+  name: string;
+  type: ProductType;
+  salesPrice: string | number;
+  costPrice: string | number;
+  notes?: string | null;
+  isActive?: boolean;
+  variants?: CreateVariantPayload[];
+}
+
+export interface UpdateProductPayload {
+  name?: string;
+  type?: ProductType;
+  salesPrice?: string | number;
+  costPrice?: string | number;
+  notes?: string | null;
+  isActive?: boolean;
+}
+
+export interface CalculatePricePayload {
+  productId: string;
+  selectedVariantIds: string[];
+}
+
+export interface PriceBreakdownItem {
+  variantId: string;
+  variantType: string;
+  variantValue: string;
+  additionalPrice: string;
+}
+
+export interface PriceCalculationResult {
+  productId: string;
+  productName: string;
+  baseSalesPrice: string;
+  selectedVariants: PriceBreakdownItem[];
+  totalVariantAdditions: string;
+  finalPrice: string;
+  currency: string;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+

@@ -4,6 +4,7 @@ import {
   Menu,
   X,
   Users,
+  Package,
   LogOut,
   LogIn,
   UserPlus,
@@ -75,6 +76,16 @@ export const Header: React.FC = () => {
               Dashboard
             </Link>
 
+            {isAuthenticated && (
+              <Link
+                to="/products"
+                className="hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+              >
+                <Package className="w-4 h-4 text-indigo-400" />
+                <span>Products</span>
+              </Link>
+            )}
+
             {/* Admin Specific Links */}
             {user?.role === 'ADMIN' && (
               <Link
@@ -143,6 +154,15 @@ export const Header: React.FC = () => {
             >
               Dashboard
             </Link>
+            {isAuthenticated && (
+              <Link
+                to="/products"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2 rounded-lg text-base font-medium text-slate-300 hover:bg-slate-800"
+              >
+                Products
+              </Link>
+            )}
             {user?.role === 'ADMIN' && (
               <Link
                 to="/staff"
