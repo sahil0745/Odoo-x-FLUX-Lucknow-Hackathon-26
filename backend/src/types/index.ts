@@ -22,3 +22,19 @@ export interface PaginatedResult<T> {
   hasNext: boolean;
   hasPrev: boolean;
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: 'ADMIN' | 'STAFF' | 'CUSTOMER';
+  customerProfileId?: string | null;
+  staffProfileId?: string | null;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthUser;
+    }
+  }
+}

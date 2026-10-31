@@ -1,5 +1,7 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { env } from './config/env';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler } from './middleware/errorHandler';
@@ -9,7 +11,13 @@ import v1Router from './routes';
 export function createApp(): Application {
   const app = express();
 
-  // 1. Security & CORS configuration
+  // 1. Helmet security headers
+  app.use(helmet());
+
+  // 2. Cookie parser for HttpOnly refresh tokens
+  app.use(cookieParser());
+
+  // 3. CORS configuration
   const allowedOrigins = env.CORS_ORIGIN.split(',').map((origin) => origin.trim());
   app.use(
     cors({
@@ -27,11 +35,11 @@ export function createApp(): Application {
     })
   );
 
-  // 2. Request body parsers
+  // 4. Request body parsers
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // 3. Request Logging middleware
+  // 5. Request Logging middleware
   app.use(requestLogger);
 
   // 4. Mount versioned API routes

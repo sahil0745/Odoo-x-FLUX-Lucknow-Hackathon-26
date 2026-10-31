@@ -11,10 +11,18 @@ const envSchema = z.object({
   API_PREFIX: z.string().default('/api/v1'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   DATABASE_URL: z.string().url().default('postgresql://postgres:postgres@localhost:5432/brightloop_subscriptions?schema=public'),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
+  DEFAULT_CURRENCY: z.string().default('USD'),
   JWT_ACCESS_SECRET: z.string().min(16).default('default_dev_access_secret_min_32_characters_long_12345'),
   JWT_REFRESH_SECRET: z.string().min(16).default('default_dev_refresh_secret_min_32_characters_long_12345'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  // Email / SMTP configuration (Optional for local dev, uses console logger adapter if omitted)
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('Brightloop <noreply@brightloop.local>'),
 });
 
 const parsed = envSchema.safeParse(process.env);
